@@ -2,93 +2,70 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>لعبة الدودة المطورة</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>لعبة الدودة للموبايل</title>
     <style>
         body { 
             display: flex; flex-direction: column; justify-content: center; align-items: center; 
-            height: 100vh; margin: 0; background: radial-gradient(#2c3e50, #000); 
-            color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden;
+            height: 100vh; margin: 0; background: #1a1a1a; color: white; font-family: sans-serif;
+            touch-action: manipulation; /* منع الزوم عند اللمس المتكرر */
         }
-        .ui { margin-bottom: 10px; text-align: center; }
-        canvas { 
-            border: 10px solid #34495e; border-radius: 8px;
-            box-shadow: 0 0 30px rgba(46, 204, 113, 0.3); 
-            background-color: #1a1a1a;
+        canvas { border: 5px solid #333; background: #000; max-width: 90vw; max-height: 50vh; }
+        .controls { display: grid; grid-template-columns: repeat(3, 70px); gap: 10px; margin-top: 20px; }
+        .btn { 
+            width: 70px; height: 70px; background: #444; border-radius: 10px; 
+            display: flex; justify-content: center; align-items: center; 
+            font-size: 24px; user-select: none; active-background: #666;
         }
-        .stats-container { display: flex; gap: 20px; font-size: 1.2rem; }
-        .level-up { color: #f1c40f; font-weight: bold; animation: blink 0.5s infinite; }
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
+        .up { grid-column: 2; }
+        .left { grid-column: 1; }
+        .down { grid-column: 2; }
+        .right { grid-column: 3; }
+        .stats { margin-bottom: 10px; font-size: 20px; }
     </style>
 </head>
 <body>
 
-    <div class="ui">
-        <h1>🐍 تحدي الدودة السريعة</h1>
-        <div class="stats-container">
-            <p>النقاط: <span id="score" style="color: #2ecc71;">0</span></p>
-            <p>المستوى: <span id="level" style="color: #f1c40f;">1</span></p>
-            <p>أعلى نتيجة: <span id="highScore" style="color: #e74c3c;">0</span></p>
-        </div>
-    </div>
-
+    <div class="stats">النقاط: <span id="score">0</span></div>
     <canvas id="snakeGame" width="400" height="400"></canvas>
+
+    <div class="controls">
+        <div class="btn up" onclick="setDir('UP')">⬆️</div>
+        <div class="btn left" onclick="setDir('LEFT')">⬅️</div>
+        <div class="btn down" onclick="setDir('DOWN')">⬇️</div>
+        <div class="btn right" onclick="setDir('RIGHT')">➡️</div>
+    </div>
 
     <script>
         const canvas = document.getElementById("snakeGame");
         const ctx = canvas.getContext("2d");
         const scoreElement = document.getElementById("score");
-        const levelElement = document.getElementById("level");
-        const highScoreElement = document.getElementById("highScore");
 
         const box = 20;
         let snake = [{ x: 10 * box, y: 10 * box }];
-        let food = getRandomFood();
+        let food = { x: Math.floor(Math.random() * 19 + 1) * box, y: Math.floor(Math.random() * 19 + 1) * box };
         let score = 0;
-        let level = 1;
-        let gameSpeed = 150; 
         let d = "RIGHT";
-        let nextD = "RIGHT"; 
-        let highScore = localStorage.getItem("snakeHighScore") || 0;
-        highScoreElement.innerText = highScore;
 
-        // تحسين التحكم (منع الدودة من عكس اتجاهها فجأة وتصادمها مع نفسها)
-        document.addEventListener("keydown", e => {
-            if(e.keyCode == 37 && d != "RIGHT") nextD = "LEFT";
-            else if(e.keyCode == 38 && d != "DOWN") nextD = "UP";
-            else if(e.keyCode == 39 && d != "LEFT") nextD = "RIGHT";
-            else if(e.keyCode == 40 && d != "UP") nextD = "DOWN";
-        });
-
-        function getRandomFood() {
-            return {
-                x: Math.floor(Math.random() * 19 + 1) * box,
-                y: Math.floor(Math.random() * 19 + 1) * box
-            };
+        // وظيفة التحكم للأزرار اللمسية
+        function setDir(newDir) {
+            if(newDir == "LEFT" && d != "RIGHT") d = "LEFT";
+            else if(newDir == "UP" && d != "DOWN") d = "UP";
+            else if(newDir == "RIGHT" && d != "LEFT") d = "RIGHT";
+            else if(newDir == "DOWN" && d != "UP") d = "DOWN";
         }
 
         function draw() {
-            d = nextD;
-            // مسح الخلفية بتأثير ضبابي خفيف للحركة
-            ctx.fillStyle = "rgba(26, 26, 26, 0.8)";
+            ctx.fillStyle = "black";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             for(let i = 0; i < snake.length; i++) {
-                // تدرج لوني لجسم الدودة
                 ctx.fillStyle = (i == 0) ? "#2ecc71" : "#27ae60";
-                ctx.shadowBlur = (i == 0) ? 15 : 0;
-                ctx.shadowColor = "#2ecc71";
-                ctx.fillRect(snake[i].x, snake[i].y, box-2, box-2);
-                ctx.shadowBlur = 0;
+                ctx.fillRect(snake[i].x, snake[i].y, box, box);
             }
 
-            // رسم الطعام بتوهج
-            ctx.fillStyle = "#e74c3c";
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = "#e74c3c";
-            ctx.beginPath();
-            ctx.arc(food.x + box/2, food.y + box/2, box/2.5, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.shadowBlur = 0;
+            ctx.fillStyle = "red";
+            ctx.fillRect(food.x, food.y, box, box);
 
             let snakeX = snake[0].x;
             let snakeY = snake[0].y;
@@ -98,30 +75,19 @@
             if( d == "RIGHT") snakeX += box;
             if( d == "DOWN") snakeY += box;
 
-            // منطق الأكل وزيادة الصعوبة
             if(snakeX == food.x && snakeY == food.y) {
                 score++;
-                if(score % 5 == 0) { // زيادة المستوى كل 5 نقاط
-                    level++;
-                    gameSpeed = Math.max(50, gameSpeed - 15); // زيادة السرعة
-                    clearInterval(game);
-                    game = setInterval(draw, gameSpeed);
-                }
                 scoreElement.innerText = score;
-                levelElement.innerText = level;
-                food = getRandomFood();
+                food = { x: Math.floor(Math.random() * 19 + 1) * box, y: Math.floor(Math.random() * 19 + 1) * box };
             } else {
                 snake.pop();
             }
 
             let newHead = { x: snakeX, y: snakeY };
 
-            // منطق الخسارة (الاصطدام بالجدران أو الجسم)
             if(snakeX < 0 || snakeX >= canvas.width || snakeY < 0 || snakeY >= canvas.height || collision(newHead, snake)) {
-                if(score > highScore) {
-                    localStorage.setItem("snakeHighScore", score);
-                }
-                alert(`انتهت اللعبة! \nنقاطك: ${score} \nالمستوى: ${level}`);
+                clearInterval(game);
+                alert("Game Over! Score: " + score);
                 location.reload();
             }
 
@@ -135,7 +101,7 @@
             return false;
         }
 
-        let game = setInterval(draw, gameSpeed);
+        let game = setInterval(draw, 150);
     </script>
 </body>
 </html>
